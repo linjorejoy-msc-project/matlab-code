@@ -1,14 +1,15 @@
 clear;
 clc;
 format compact
-
+delete(gcp('nocreate'))
+parpool
 HEADERSIZE = 5;
 
 CONFIG_DATA_STR = '{"id":"CLIENT_4","name":"aerodynamics","subscribed_topics":["motion", "atmosphere", "field"],"published_topics":["drag", "field_update"],"constants_required":["dragCoefficient","rocketFrontalArea", "timestepSize","totalTimesteps"],"variables_subscribed":[]}';
 global CONFIG_DATA;
 CONFIG_DATA = jsondecode(CONFIG_DATA_STR);
 
-server_conn = tcpclient('131.231.139.66',1234);
+server_conn = tcpclient('192.168.150.160',1234);
 
 
 global CONSTANTS;
@@ -17,7 +18,9 @@ CONSTANTS = containers.Map;
 % Topic Data
 global topic_data;
 topic_data = containers.Map;
-topic_data('drag') = 0;
+topic_data('drag') = 0.0;
+fprintf("Topic_data after initiation : %s\n", jsonencode(topic_data))
+
 
 % cycle flags
 global cycle_flags;
@@ -108,7 +111,7 @@ function listening_function(server_connection)
     global CONSTANTS;
     global CONFIG_DATA
     while true
-        msg = recv_msg(server_connection,5);
+        msg = recv_msg2(server_connection);
         fprintf('Received: %s\n', msg);
         if strcmp(msg, 'CONFIG')
             fprintf('Config Requested\n');
@@ -122,6 +125,8 @@ function listening_function(server_connection)
     fprintf('Exit initial while loop\n');
     
     % Runing 2 threads for 2 operations
+    global topic_data;
+    fprintf('Topic Data in Listening Function :%s\n', jsonencode(topic_data));
     parfor n = 1:2
        if n == 1
            fprintf('Listen Analysis started\n');
@@ -171,7 +176,7 @@ function constants_dict = request_constants(server_connection)
     % server_connection     : tcpclient
     
     write(server_connection, format_msg_with_header('CONSTANTS'));
-    constants_str = recv_msg(server_connection);
+    constants_str = recv_msg2(server_connection);
     fprintf('Received Constants str: %s\n', constants_str);
     constants_struct = jsondecode(constants_str);
     constants_dict = containers.Map(fieldnames(constants_struct), struct2cell(constants_struct));
@@ -226,31 +231,36 @@ function field_received(data_dict, info)
 end
 
 
-function msg = recv_msg2(server_connection, varargin)
+function msg = recv_msg2(server_connection)
     % server_connection     : tcpclient
     % varargin              : 1 parameter as msg length
     
-    try
+    %try
         while true
-            if nargin == 0
+            %if nargin == 0
                 % Header as 5
-                header = read(server_connection, 5);
+                while true
+                    header = read(server_connection, 5);
+                    if ~isnan(header)
+                        break
+                    end
+                end
                 msg_len = str2double(native2unicode(header));
                 resp = read(server_connection, msg_len);
-            else
-                % Read just n = varargin{1}
-                resp = read(server_connection, varargin{1});
-            end
+            %else
+            %    % Read just n = varargin{1}
+            %    resp = read(server_connection, varargin{1});
+            %end
             msg_str = native2unicode(resp);
             if msg_str
                msg = msg_str;
                break;
             end
         end
-    catch
-        warning('Error occured while reading message');
-        msg = NaN;
-    end
+    %catch
+    %    warning('Error occured while reading message');
+    %    msg = NaN;
+    %end
 end
 
 function msg = recv_msg(server_connection, varargin)
@@ -294,7 +304,7 @@ end
 function [topic, msg] = recv_topic_data(server_connection)
     % server_connection     : tcpclient
 
-    data = recv_msg(server_connection);
+    data = recv_msg2(server_connection);
     topic = strip(data(1:25));
     fprintf('Received data of topic: "%s" as "%s"\n',topic, data);
     msg = data(26:end);
