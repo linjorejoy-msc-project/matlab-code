@@ -57,9 +57,11 @@ function run_one_cycle(server_connection)
     fprintf('Running one cycle\n');
     topic_data('drag') = (CONSTANTS('dragCoefficient')*data_dict('density')*data_dict('currentVelocity')*data_dict('currentVelocity')*CONSTANTS('rocketFrontalArea'))/2;
     send_topic_data(server_connection, 'drag', jsonencode(topic_data));
-    fprintf('data_dict(currentTimestep): %s\n', data_dict('currentTimestep'));
-    fprintf('str2double(data_dict(currentTimestep)): %s\n', str2double(data_dict('currentTimestep')));
-    timestep_str = sprintf('{"currentTimestep":%d}',str2double(data_dict('currentTimestep'))+1);
+    fprintf('data_dict(currentTimestep): ');
+    data_dict('currentTimestep')
+    fprintf('str2double(data_dict(currentTimestep)):');
+    str2double(data_dict('currentTimestep'))
+    timestep_str = sprintf('{"currentTimestep":%d}',data_dict('currentTimestep')+1);
     fprintf('timestep_str: %s\n', timestep_str);
     send_topic_data(server_connection, 'field_update', timestep_str);
 end

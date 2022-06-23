@@ -57,10 +57,7 @@ function run_one_cycle(server_connection)
     fprintf('Running one cycle\n');
     topic_data('drag') = (CONSTANTS('dragCoefficient')*data_dict('density')*data_dict('currentVelocity')*data_dict('currentVelocity')*CONSTANTS('rocketFrontalArea'))/2;
     send_topic_data(server_connection, 'drag', jsonencode(topic_data));
-    fprintf('data_dict(currentTimestep): %s\n', data_dict('currentTimestep'));
-    fprintf('str2double(data_dict(currentTimestep)): %s\n', str2double(data_dict('currentTimestep')));
-    timestep_str = sprintf('{"currentTimestep":%d}',str2double(data_dict('currentTimestep'))+1);
-    fprintf('timestep_str: %s\n', timestep_str);
+    timestep_str = sprintf('{"currentTimestep":%d}',data_dict('currentTimestep')+1);
     send_topic_data(server_connection, 'field_update', timestep_str);
 end
 
@@ -233,10 +230,8 @@ function field_received(data_dict, info)
     % info                  : string
     
     info_struct = jsondecode(info);
-    fprintf('info: %s\n', info);
     fprintf('Inside field_received\n');
     info_obj = containers.Map(fieldnames(info_struct), struct2cell(info_struct));
-    fprintf('info_obj("currentTimestep"): %s\n', info_obj("currentTimestep"));
     data_dict("currentTimestep") = info_obj("currentTimestep");
 end
 
