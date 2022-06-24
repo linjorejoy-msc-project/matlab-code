@@ -54,7 +54,7 @@ function run_one_cycle(server_connection)
     global data_dict;
     global CONSTANTS;
     
-    fprintf('Running one cycle\n');
+    fprintf('Timestep: %d running\n', data_dict('currentTimestep'));
     topic_data('drag') = (CONSTANTS('dragCoefficient')*data_dict('density')*data_dict('currentVelocity')*data_dict('currentVelocity')*CONSTANTS('rocketFrontalArea'))/2;
     send_topic_data(server_connection, 'drag', jsonencode(topic_data));
     timestep_str = sprintf('{"currentTimestep":%d}',data_dict('currentTimestep')+1);
@@ -68,11 +68,9 @@ function run_cycle(server_connection)
     global cycle_flags;
     while true
        if check_to_run_cycle()
-           fprintf('Initiated One Cycle\n');
            make_all_cycle_flags_default();
            run_one_cycle(server_connection);
        else
-           fprintf('Initiating Listen analysis\n');
            listen_analysis(server_connection);
        end
        
@@ -93,7 +91,6 @@ end
 function listen_analysis(server_connection)
     % server_connection     : tcpclient
     
-    fprintf('Inside Listen analysis Function\n');
     global data_dict;
     global cycle_flags;
     global topic_func_dict;
@@ -202,7 +199,6 @@ function motion_received(data_dict, info)
     % info                  : string
     
     info_struct = jsondecode(info);
-    fprintf('Inside motion_received\n');
     info_obj = containers.Map(fieldnames(info_struct), struct2cell(info_struct));
     data_dict("netThrust") = info_obj("netThrust");
     data_dict("currentAcceleration") = info_obj("currentAcceleration");
@@ -218,7 +214,6 @@ function atmosphere_received(data_dict, info)
     % info                  : string
     
     info_struct = jsondecode(info);
-    fprintf('Inside atmosphere_received\n');
     info_obj = containers.Map(fieldnames(info_struct), struct2cell(info_struct));
     data_dict("pressure") = info_obj("pressure");
     data_dict("temperature") = info_obj("temperature");
@@ -230,7 +225,6 @@ function field_received(data_dict, info)
     % info                  : string
     
     info_struct = jsondecode(info);
-    fprintf('Inside field_received\n');
     info_obj = containers.Map(fieldnames(info_struct), struct2cell(info_struct));
     data_dict("currentTimestep") = info_obj("currentTimestep");
 end
@@ -240,32 +234,21 @@ function msg = recv_msg2(server_connection)
     % server_connection     : tcpclient
     % varargin              : 1 parameter as msg length
     
-    %try
-        while true
-            %if nargin == 0
-                % Header as 5
-                while true
-                    header = read(server_connection, 5);
-                    if ~isnan(header)
-                        break
-                    end
+    while true
+            while true
+                header = read(server_connection, 5);
+                if ~isnan(header)
+                    break
                 end
-                msg_len = str2double(native2unicode(header));
-                resp = read(server_connection, msg_len);
-            %else
-            %    % Read just n = varargin{1}
-            %    resp = read(server_connection, varargin{1});
-            %end
-            msg_str = native2unicode(resp);
-            if msg_str
-               msg = msg_str;
-               break;
             end
+            msg_len = str2double(native2unicode(header));
+            resp = read(server_connection, msg_len);
+        msg_str = native2unicode(resp);
+        if msg_str
+           msg = msg_str;
+           break;
         end
-    %catch
-    %    warning('Error occured while reading message');
-    %    msg = NaN;
-    %end
+    end
 end
 
 function msg = recv_msg(server_connection, varargin)
